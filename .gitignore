@@ -1,0 +1,43 @@
+# --- Environment ---
+# Ignore the virtual environment folder
+venv/
+.venv/
+env/
+.env/
+
+# --- Secrets ---
+# Ignore environment files, which contain sensitive API keys
+# IMPORTANT: Never commit your .env file!
+.env
+*.env
+
+# --- Python ---
+# Ignore Python cache files and folders
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore build and distribution artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# --- IDE / Editor ---
+# Ignore settings folders from popular editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- Testing ---
+# Ignore testing artifacts like coverage reports and pytest cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- OS ---
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
