@@ -1001,101 +1001,125 @@ import {
   Wind,
   Sun,
   Sprout,
-  Calendar,
   BarChart3,
 } from "lucide-react"
 import VoiceChatbot from "@/components/voice-chatbot"
 import CropAnalytics from "@/components/crop-analytics"
 
-// Static crop options
-const cropOptions = ["Wheat", "Rice", "Maize", "Mustard", "Sugarcane", "Sorghum"]
-
 export default function Dashboard() {
   const [selectedCrop, setSelectedCrop] = useState<string>("")
-  const [location, setLocation] = useState<string>("Detecting...")
-  const [stateName, setStateName] = useState<string>("")
-  const [districtName, setDistrictName] = useState<string>("")
-  const [weather, setWeather] = useState<any | null>(null)
-
+  const [location, setLocation] = useState<string>("Fetching...")
+  const [weather, setWeather] = useState<any>(null)
+  const [language, setLanguage] = useState<"en" | "hi" | "bn" | "te" | "ta" | "mr" | "gu" | "kn">("en")
   const [activeTab, setActiveTab] = useState("overview")
   const [landArea, setLandArea] = useState<string>("")
   const [landUnit, setLandUnit] = useState<string>("acre")
   const [season, setSeason] = useState<string>("all")
-
-  const [yieldResult, setYieldResult] = useState<any | null>(null)
+  const [yieldResult, setYieldResult] = useState<string>("")
   const [fertilizerResult, setFertilizerResult] = useState<string>("")
 
   const router = useRouter()
 
-  // 📍 Fetch farmer location + backend details
+  // Geolocation + backend fetch
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude
-          const lon = pos.coords.longitude
-          setLocation(`${lat.toFixed(2)}, ${lon.toFixed(2)}`)
-
-          try {
-            const res = await fetch(`http://localhost:8000/details?lat=${lat}&lon=${lon}`)
-            const data = await res.json()
-            console.log("Location API:", data)
-
-            setStateName(data.state || "")
-            setDistrictName(data.district || "")
-            setWeather(data.weather || null)
-          } catch (err) {
-            console.error("Failed to fetch location details:", err)
-          }
-        },
-        (error) => {
-          console.error("Geolocation error:", error)
-          setLocation("Location unavailable")
-        }
-      )
-    } else {
+    if (!navigator.geolocation) {
       setLocation("Geolocation not supported")
-    }
-  }, [])
-
-  // 📊 Call yield + fertilizer predictions
-  async function fetchPredictions() {
-    if (!selectedCrop || !landArea) {
-      alert("Please select crop and enter land area")
       return
     }
 
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+
+        try {
+          const res = await fetch(
+            `http://localhost:8000/api/v1/location/details?lat=${lat}&lon=${lon}`
+          )
+          if (!res.ok) throw new Error(`Backend error: ${res.status}`)
+          const data = await res.json()
+          setLocation(
+            `${data.address.city || data.address.district || data.address.state}, ${data.address.country}`
+          )
+          setWeather(data.weather)
+        } catch (err: any) {
+          console.error(err)
+          setLocation("❌ Error: " + err.message)
+        }
+      },
+      (err) => {
+        if (err.code === 1) setLocation("Permission denied")
+        else if (err.code === 2) setLocation("Position unavailable")
+        else if (err.code === 3) setLocation("Geolocation timed out")
+      }
+    )
+  }, [])
+
+  // Yield prediction
+  async function fetchYield() {
+    if (!selectedCrop || !landArea || !season) {
+      alert("Please select crop, season, and enter land area")
+      return
+    }
     try {
-      const resYield = await fetch("http://localhost:8000/predict-yield", {
+      const res = await fetch("http://localhost:8000/api/v1/predict-yield", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          state: stateName || "Delhi",
-          district: districtName || "New Delhi",
+          state: "Delhi",
+          district: "New Delhi",
           year: 2025,
           season,
           crop: selectedCrop,
           area: parseFloat(landArea),
         }),
       })
-      const dataYield = await resYield.json()
-      setYieldResult(dataYield)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || "Unknown error")
+      setYieldResult(`Yield: ${data.yield.toFixed(2)} tons/ha`)
+    } catch (err: any) {
+      setYieldResult("❌ Error: " + err.message)
+    }
+  }
 
-      const resFert = await fetch("http://localhost:8000/predict-fertilizer", {
+  // Fertilizer prediction
+  async function fetchFertilizer() {
+    if (!selectedCrop) {
+      alert("Please select crop")
+      return
+    }
+    try {
+      const resFertOld = await fetch("http://localhost:8000/api/v1/predict-fertilizer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          state: stateName || "Delhi",
+          state: "Delhi",
           temperature: weather?.temperature || 30,
           humidity: weather?.humidity || 60,
           moisture: 40,
           crop_type: selectedCrop,
         }),
       })
-      const dataFert = await resFert.json()
-      setFertilizerResult(dataFert.fertilizer)
-    } catch (err) {
-      console.error("Backend error:", err)
+      const dataFertOld = await resFertOld.json()
+
+      const resFertML = await fetch("http://localhost:8000/api/v1/predict-fertilizer-ml", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          state: "Delhi",
+          temperature: weather?.temperature || 30,
+          humidity: weather?.humidity || 60,
+          moisture: 40,
+          crop_type: selectedCrop,
+        }),
+      })
+      const dataFertML = await resFertML.json()
+
+      setFertilizerResult(
+        `Rule-based: ${dataFertOld.fertilizer || "N/A"} | ML-based: ${dataFertML.fertilizer || "N/A"}`
+      )
+    } catch (err: any) {
+      setFertilizerResult("❌ Error: " + err.message)
     }
   }
 
@@ -1104,13 +1128,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <Sprout className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-primary">KrishiMitraAI</h1>
-          </div>
-
+          <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+            <Sprout className="h-6 w-6" /> KrishiMitraAI
+          </h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
@@ -1119,7 +1139,6 @@ export default function Dashboard() {
             <Button
               variant="outline"
               onClick={() => router.push("/?lang=en")}
-              className="hover:bg-primary hover:text-primary-foreground transition-colors"
             >
               Change Language
             </Button>
@@ -1128,173 +1147,97 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <Sprout className="h-4 w-4" /> Overview
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" /> Analytics
-            </TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
-          {/* Overview */}
           <TabsContent value="overview">
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Main */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Weather */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sun className="h-5 w-5" /> Today's Weather
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {weather ? (
-                      <div className="grid grid-cols-4 gap-4 text-center">
-                        <div>
-                          <Thermometer className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-                          <p className="text-2xl font-bold">{weather.temperature}°C</p>
-                        </div>
-                        <div>
-                          <Droplets className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                          <p className="text-2xl font-bold">{weather.humidity}%</p>
-                        </div>
-                        <div>
-                          <Wind className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-                          <p className="text-2xl font-bold">{weather.wind} km/h</p>
-                        </div>
-                        <div>
-                          <Sun className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                          <p className="text-lg font-bold">{weather.condition}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">Fetching weather...</p>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Weather */}
+              <Card>
+                <CardHeader><CardTitle>Today's Weather</CardTitle></CardHeader>
+                <CardContent>
+                  {weather ? (
+                    <div>
+                      🌡 {weather.temperature}°C | 💧 {weather.humidity}% | 🌬 {weather.wind_speed} km/h | ☀ {weather.description}
+                    </div>
+                  ) : (
+                    <p>Loading weather...</p>
+                  )}
+                </CardContent>
+              </Card>
 
-                {/* Crop + Land + Season */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sprout className="h-5 w-5" /> Select Crop
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Select value={selectedCrop} onValueChange={setSelectedCrop}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Crop" />
-                      </SelectTrigger>
+              {/* Crop + Inputs */}
+              <Card className="lg:col-span-2">
+                <CardHeader><CardTitle>Crop & Predictions</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Crop */}
+                  <Select value={selectedCrop} onValueChange={setSelectedCrop}>
+                    <SelectTrigger><SelectValue placeholder="Select crop" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Wheat">Wheat</SelectItem>
+                      <SelectItem value="Rice">Rice</SelectItem>
+                      <SelectItem value="Maize">Maize</SelectItem>
+                      <SelectItem value="Mustard">Mustard</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Season */}
+                  <Select value={season} onValueChange={setSeason}>
+                    <SelectTrigger><SelectValue placeholder="Select season" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Rabi">Rabi</SelectItem>
+                      <SelectItem value="Kharif">Kharif</SelectItem>
+                      <SelectItem value="Zaid">Zaid</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Land Area */}
+                  <div className="flex gap-3">
+                    <Input type="number" placeholder="Area" value={landArea} onChange={(e) => setLandArea(e.target.value)} />
+                    <Select value={landUnit} onValueChange={setLandUnit}>
+                      <SelectTrigger className="w-32"><SelectValue placeholder="Unit" /></SelectTrigger>
                       <SelectContent>
-                        {cropOptions.map((crop) => (
-                          <SelectItem key={crop} value={crop}>
-                            {crop}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="acre">Acre</SelectItem>
+                        <SelectItem value="hectare">Hectare</SelectItem>
+                        <SelectItem value="sqm">Sq. Meter</SelectItem>
+                        <SelectItem value="sqft">Sq. Feet</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
 
-                    <div className="flex gap-3">
-                      <Input
-                        type="number"
-                        placeholder="Enter land area"
-                        value={landArea}
-                        onChange={(e) => setLandArea(e.target.value)}
-                      />
-                      <Select value={landUnit} onValueChange={setLandUnit}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Unit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="acre">Acre</SelectItem>
-                          <SelectItem value="hectare">Hectare</SelectItem>
-                          <SelectItem value="sqm">Sq. Meter</SelectItem>
-                          <SelectItem value="sqft">Sq. Feet</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {/* Buttons */}
+                  <div className="flex gap-4">
+                    <Button onClick={fetchYield}>Get Yield</Button>
+                    <Button onClick={fetchFertilizer} variant="secondary">Get Fertilizer</Button>
+                  </div>
 
-                    <Select value={season} onValueChange={setSeason}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Season" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rabi">Rabi</SelectItem>
-                        <SelectItem value="kharif">Kharif</SelectItem>
-                        <SelectItem value="all">All</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  {/* Results */}
+                  {yieldResult && <p>{yieldResult}</p>}
+                  {fertilizerResult && <p>{fertilizerResult}</p>}
+                </CardContent>
+              </Card>
+            </div>
 
-                    {selectedCrop && (
-                      <div className="mt-4 p-4 bg-muted rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          Predictions - {selectedCrop} ({landArea || "?"} {landUnit}, {season})
-                        </h4>
-                        <ul className="space-y-1 text-sm text-muted-foreground">
-                          {yieldResult && (
-                            <li>• Yield: {yieldResult.yield.toFixed(2)} tons/ha</li>
-                          )}
-                          {yieldResult && (
-                            <li>• Production: {yieldResult.production.toFixed(2)} tons</li>
-                          )}
-                          {fertilizerResult && (
-                            <li>• Fertilizer: {fertilizerResult}</li>
-                          )}
-                          {!yieldResult && !fertilizerResult && (
-                            <li className="text-gray-500">Click below to fetch predictions</li>
-                          )}
-                        </ul>
-                        <Button onClick={fetchPredictions} className="mt-3">
-                          Get Predictions
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Sidebar */}
-              <div className="space-y-6">
-                <VoiceChatbot language="en" />
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" /> This Week
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between">
-                      <span>Rainy Days</span>
-                      <span className="font-semibold">3</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Avg Temp</span>
-                      <span className="font-semibold">26°C</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Soil Moisture</span>
-                      <span className="font-semibold text-green-600">Good</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            {/* Voice Assistant */}
+            <div className="mt-8">
+              <Card>
+                <CardHeader><CardTitle>Voice Assistant</CardTitle></CardHeader>
+                <CardContent>
+                  <VoiceChatbot language={language} />
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
-          {/* Analytics */}
           <TabsContent value="analytics">
-            <CropAnalytics language="en" selectedCrop={selectedCrop} />
+            <CropAnalytics language={language} selectedCrop={selectedCrop} />
           </TabsContent>
         </Tabs>
       </div>
     </div>
   )
 }
-
-
-
-
