@@ -1,4 +1,3 @@
-# app/services/external_apis.py
 import httpx
 import asyncio
 from fastapi import HTTPException
@@ -49,5 +48,4 @@ async def get_location_and_weather_details(lat: float, lon: float, settings: Set
             "country": geocoding_data[0].get("country", "Unknown")
         }
     }
-    
     return combined_data

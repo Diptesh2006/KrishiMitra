@@ -18,6 +18,21 @@ __pycache__/
 *.pyo
 *.pyd
 
+# --- Backend ---
+backend/datasets/*.csv
+backend/models/model1/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# --- Frontend ---
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
 # Ignore build and distribution artifacts
 build/
 dist/
