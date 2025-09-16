@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Query, Depends, HTTPException
-from app.schemas.location import LocationDetailsResponse
-from app.services import external_apis
-from app.core.config import Settings, settings
+from backend.app.schemas.location import LocationDetailsResponse
+from backend.app.services import external_apis
+from backend.app.core.config import Settings, settings
+import traceback 
 
 def get_settings() -> Settings:
     return settings
@@ -25,7 +26,8 @@ async def get_details(
     try:
         data = await external_apis.get_location_and_weather_details(lat, lon, app_settings)
         return data
-    except HTTPException as e:
-        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print("--- AN ERROR WAS CAUGHT! ---")
+        traceback.print_exc() # This will print the full traceback
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+    

@@ -2,14 +2,22 @@
 """Original file is located at
     https://colab.research.google.com/drive/1CxQIvtsXI0rFz9YAf8WGEdI--ASFow4J
 """
-
+import joblib
 import pandas as pd
+from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 
-df1 = pd.read_csv("fertilisers.csv")   # Crop-Fertilizer Dataset
-df2 = pd.read_csv("nutrients by state.csv")   # State Nutrient Dataset
+
+project_root = Path(__file__).parent.parent
+fertilisers_csv_path = project_root / "datasets" / "fertilisers.csv"
+nutrients_csv_path = project_root / "datasets" / "nutrients by state.csv"
+
+df1 = pd.read_csv(fertilisers_csv_path)   # Crop-Fertilizer Dataset
+df2 = pd.read_csv(nutrients_csv_path)   # State Nutrient Dataset
+
+print("Successfully loaded datasets")
 
 le_soil = LabelEncoder()
 df1["Soil Type"] = le_soil.fit_transform(df1["Soil Type"])
@@ -91,3 +99,14 @@ def predict_fertilizer(state, temperature, humidity, moisture, crop_type):
     return le_fert.inverse_transform([fert_pred])[0]
 
 print(predict_fertilizer("Bihar", 30, 60, 40, "Maize"))
+
+model_components = {
+    "model": model,
+    "le_crop": le_crop,
+    "le_fert": le_fert
+}
+
+# Save the entire dictionary to a single file
+joblib.dump(model_components, "fertilizer_model_components.joblib")
+
+print("Model and encoders saved to fertilizer_model_components.joblib")

@@ -5,6 +5,7 @@ class WeatherInfo(BaseModel):
     humidity_percent: int
     condition: str
     wind_speed_mps: float
+    estimated_soil_moisture: int 
 
 class GeoInfo(BaseModel):
     city: str

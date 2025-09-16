@@ -8,6 +8,7 @@ Original file is located at
 """
 
 import pandas as pd
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -15,8 +16,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, mean_squared_error
 from xgboost import XGBRegressor
 import numpy as np
+import joblib
 
-df = pd.read_csv("crop_production.csv")
+current_file_path = Path(__file__)
+project_root = current_file_path.parent.parent
+data_path = project_root / "datasets" / "crop_production.csv"
+df = pd.read_csv(data_path)
 
 df = df.dropna(subset=["Area", "Production"])
 df = df[df["Area"] > 0]
@@ -77,3 +82,7 @@ sample = pd.DataFrame([{
 pred_yield = pipeline.predict(sample)[0]
 print("Predicted Yield (tons per ha):", pred_yield)
 print("Predicted Production (tons):", pred_yield * sample["Area"].values[0])
+
+
+joblib.dump(pipeline, "crop_yield_pipeline.joblib")
+print("Pipeline saved as crop_yield_pipeline.joblib")
