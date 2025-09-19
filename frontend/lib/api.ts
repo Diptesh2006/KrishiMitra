@@ -64,3 +64,19 @@ export const recommendCrop = async (data: {
   }
   return response.json();
 };
+
+export const predictIrrigationFrequency = async (data: {
+  latitude: number;
+  longitude: number;
+  crop: string;
+}) => {
+  const response = await fetch(`${API_BASE_URL}/irrigation/predict_frequency`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to predict irrigation frequency");
+  }
+  return response.json();
+};

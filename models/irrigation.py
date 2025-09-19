@@ -7,8 +7,10 @@ Original file is located at
     https://colab.research.google.com/drive/1rSVPoimruaiPL62siL3AbBrgrrfvBEHB
 """
 
+import joblib
 import pandas as pd
 import numpy as np
+from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder,StandardScaler
@@ -17,8 +19,14 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score,mean_squared_error,confusion_matrix,classification_report
 
-df = pd.read_csv("irrigation_freq.csv")
-df_place = pd.read_csv("place.csv")
+
+project_root = Path(__file__).parent.parent
+irrigation_freq_path = project_root / "datasets" / "irrigation_freq.csv"
+place_path = project_root / "datasets" / "place.csv"
+
+df = pd.read_csv(irrigation_freq_path)   # Crop-Fertilizer Dataset
+df_place = pd.read_csv(place_path)   # State Nutrient Dataset
+
 
 # Define thresholds for nutrient categories (example thresholds, adjust as needed)
 n_low_threshold = 50
@@ -150,4 +158,19 @@ def predict_irrigation_frequency(crop, temperature, humidity, soil_moisture,stat
     pred_class = rf.predict(input_df)[0]
     return int(pred_class) + 1
 
-predict_irrigation_frequency("rice",20,82,30,"Ladakh")
+# predict_irrigation_frequency("rice",20,82,30,"Ladakh")
+
+irrigation_components = {
+    "model": rf,
+    "scaler": sc,
+    "le_crop": le_crop,
+    "columns": X.columns,
+    "state_nutrient_map": state_nutrient_map
+}
+
+# Save the entire dictionary to a single file in the correct backend location
+output_path = project_root / "backend" / "app" / "ml_models" / "irrigation_model_components.joblib"
+output_path.parent.mkdir(exist_ok=True) # Ensure the directory exists
+joblib.dump(irrigation_components, output_path)
+
+print(f"Model, scaler, encoder, columns, and state map saved to {output_path}")

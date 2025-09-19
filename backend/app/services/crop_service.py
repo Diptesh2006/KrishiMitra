@@ -56,10 +56,10 @@ def recommend_crop(state: str, temperature: float, humidity: float) -> str:
     except ValueError as e:
         raise ValueError(f"Error encoding nutrient categories: {e}")
 
-    input_data = pd.DataFrame([[{
+    input_data = pd.DataFrame([{
         'N_encoded': n_encoded, 'P_encoded': p_encoded, 'K_encoded': k_encoded,
         'temperature': temperature, 'humidity': humidity
-    }]])
+    }])
 
     # Scale the input data
     input_data_scaled = scaler.transform(input_data)

@@ -57,7 +57,7 @@ df['P_encoded'] = le_nutrient.fit_transform(df['P_category'])
 df['K_encoded'] = le_nutrient.fit_transform(df['K_category'])
 
 
-display(df[['N', 'N_category', 'N_encoded', 'P', 'P_category', 'P_encoded', 'K', 'K_category', 'K_encoded']])
+# display(df[['N', 'N_category', 'N_encoded', 'P', 'P_category', 'P_encoded', 'K', 'K_category', 'K_encoded']])
 
 def get_dominant_nutrient_level(row, nutrient_type):
      nutrient_cols = [col for col in row.index if nutrient_type in col]
@@ -186,7 +186,7 @@ def predict_crop(state, temperature, humidity):
 
 
     return predicted_crop
-print(predict_crop("West Bengal", 30, 95))
+# print(predict_crop("West Bengal", 30, 95))
 
 # Example usage (replace with your actual trained model, maps, and scaler)
 # Make sure you have run the cells to define xgb_model, state_nutrient_map, le_nutrient, and scaler
@@ -198,31 +198,31 @@ print(predict_crop("West Bengal", 30, 95))
 # else:
 #     print(f"The predicted best crop is: {predicted_crop}")
 
-import random
+# import random
 
-# Get a list of states from the state_nutrient_map
-available_states = list(state_nutrient_map.keys())
+# # Get a list of states from the state_nutrient_map
+# available_states = list(state_nutrient_map.keys())
 
-# Select a random state
-random_state = random.choice(available_states)
+# # Select a random state
+# random_state = random.choice(available_states)
 
-# Generate random temperature and humidity within a reasonable range
-# (Based on the distribution of temperature and humidity in your training data)
-random_temperature = random.uniform(10.0, 40.0) # Example range, adjust if needed
-random_humidity = random.uniform(40.0, 95.0) # Example range, adjust if needed
+# # Generate random temperature and humidity within a reasonable range
+# # (Based on the distribution of temperature and humidity in your training data)
+# random_temperature = random.uniform(10.0, 40.0) # Example range, adjust if needed
+# random_humidity = random.uniform(40.0, 95.0) # Example range, adjust if needed
 
-print(f"Using random test case:")
-print(f"State: {random_state}")
-print(f"Temperature: {random_temperature:.2f}°C")
-print(f"Humidity: {random_humidity:.2f}%")
+# print(f"Using random test case:")
+# print(f"State: {random_state}")
+# print(f"Temperature: {random_temperature:.2f}°C")
+# print(f"Humidity: {random_humidity:.2f}%")
 
 # Use the predict_crop function with the random inputs
-predicted_crop, error = predict_crop(random_state, random_temperature, random_humidity)
+# predicted_crop, error = predict_crop(random_state, random_temperature, random_humidity)
 
-if error:
-    print(error)
-else:
-    print(f"\nPredicted best crop: {predicted_crop}")
+# if error:
+#     print(error)
+# else:
+#     print(f"\nPredicted best crop: {predicted_crop}")
 
 #Creatinig a dictionary of all the components to be saved
 crop_model_components = {

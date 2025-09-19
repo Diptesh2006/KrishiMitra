@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.api.routers import location, prediction, fertilizer, crop
+from backend.app.api.routers import location, prediction, fertilizer, crop, irrigation
 
 app = FastAPI(
     title="Crop Advisor API",
@@ -28,6 +28,13 @@ app.include_router(
     prefix="/api/v1/yield",
     tags=["Crop Prediction"]
 )
+
+app.include_router(
+    irrigation.router,
+    prefix="/api/v1/irrigation",
+    tags=["Irrigation Recommendation"]
+)
+
 
 app.include_router(
     fertilizer.router,
